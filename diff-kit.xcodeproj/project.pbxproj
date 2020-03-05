@@ -36,8 +36,6 @@
 		4BA64C3B23DF25DB00D9D92B /* diff_kit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = diff_kit.h; sourceTree = "<group>"; };
 		4BA64C3C23DF25DB00D9D92B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4BA64C4423DF263F00D9D92B /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
-		4BA64C4523DF266200D9D92B /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
-		4BA64C4623DF266800D9D92B /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		4BA64C4823DF26DA00D9D92B /* Collection+Diff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Collection+Diff.swift"; sourceTree = "<group>"; };
 		4BA64C4A23DF27E300D9D92B /* Diff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diff.swift; sourceTree = "<group>"; };
 		4BA64C4E23DF29E300D9D92B /* Section.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Section.swift; sourceTree = "<group>"; };
@@ -105,8 +103,6 @@
 				4BA64C3B23DF25DB00D9D92B /* diff_kit.h */,
 				4BA64C3C23DF25DB00D9D92B /* Info.plist */,
 				4BA64C4423DF263F00D9D92B /* Config.xcconfig */,
-				4BA64C4523DF266200D9D92B /* Debug.xcconfig */,
-				4BA64C4623DF266800D9D92B /* Release.xcconfig */,
 			);
 			path = "Support Files";
 			sourceTree = "<group>";
@@ -300,7 +296,7 @@
 		};
 		4BA64C3E23DF25DB00D9D92B /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4BA64C4523DF266200D9D92B /* Debug.xcconfig */;
+			baseConfigurationReference = 4BA64C4423DF263F00D9D92B /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -364,7 +360,7 @@
 		};
 		4BA64C3F23DF25DB00D9D92B /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4BA64C4623DF266800D9D92B /* Release.xcconfig */;
+			baseConfigurationReference = 4BA64C4423DF263F00D9D92B /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -425,6 +421,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = 84Z2AMFMF3;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -450,6 +447,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = 84Z2AMFMF3;
 				DYLIB_COMPATIBILITY_VERSION = 1;
