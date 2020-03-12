@@ -18,7 +18,7 @@ public protocol Section {
   var items: [Item] { get set }
 }
 
-extension Array where Element: Section {
+public extension Array where Element: Section {
   var lastIndexPath: IndexPath? {
     guard count > 0 else { return nil }
     
