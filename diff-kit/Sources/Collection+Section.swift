@@ -72,4 +72,13 @@ public extension MutableCollection where Element: Section, Index == Int {
       }
     }
   }
+  
+  func forEach(_ body: (IndexPath, Element.Item) throws -> Void) rethrows {
+    for section in (0..<count) {
+      for item in (0..<countOfItems(in: section)) {
+        let indexPath = IndexPath(item: item, section: section)
+        try body(indexPath, self[indexPath])
+      }
+    }
+  }
 }
