@@ -1,11 +1,3 @@
-//
-//  Collection+DiffTests.swift
-//  diff-kit-tests
-//
-//  Created by Aleksey Zgurskiy on 05.03.2020.
-//  Copyright © 2020 mr.noone. All rights reserved.
-//
-
 import XCTest
 @testable import DiffKit
 
@@ -21,10 +13,16 @@ extension Diff: Equatable where ChangeIndex: Equatable & Comparable, ChangeEleme
   }
 }
 
-class Collection_DiffTests: XCTestCase {
-  override func setUp() {}
-  
-  override func tearDown() {}
+final class DiffKitTests: XCTestCase {
+  static var allTests = [
+    ("test_empty_to_1", test_empty_to_1),
+    ("test_1_to_empty", test_1_to_empty),
+    ("test_1_to_1_2", test_1_to_1_2),
+    ("test_1_2_to_1", test_1_2_to_1),
+    ("test_2_to_1_2", test_2_to_1_2),
+    ("test_1_2_to_2", test_1_2_to_2),
+    ("testManyToMany", testManyToMany)
+  ]
   
   func test_empty_to_1() {
     var diff = Diff<Int, Int>()
