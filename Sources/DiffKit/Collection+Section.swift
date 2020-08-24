@@ -9,7 +9,16 @@
 import Foundation
 import UIKit
 
-public extension MutableCollection where Element: Section, Index == Int {
+public extension MutableCollection where Element: AnySection, Index == Int {
+  var lastIndexPath: IndexPath? {
+    guard count > 0 else { return nil }
+    
+    let item = countOfItems(in: count - 1)
+    guard item > 0 else { return nil }
+    
+    return IndexPath(item: item - 1, section: count - 1)
+  }
+  
   subscript(indexPath: IndexPath) -> Element.Item {
     get { return self[indexPath.section].items[indexPath.row] }
     set { self[indexPath.section].items[indexPath.row] = newValue }
@@ -33,6 +42,15 @@ public extension MutableCollection where Element: Section, Index == Int {
   func first(where predicate: (Element.Item) throws -> Bool) rethrows -> Element.Item? {
     guard let indexPath = try firstIndexPath(where: predicate) else { return nil }
     return self[indexPath]
+  }
+  
+  func forEach(_ body: (IndexPath, Element.Item) throws -> Void) rethrows {
+    for section in (0..<count) {
+      for item in (0..<countOfItems(in: section)) {
+        let indexPath = IndexPath(item: item, section: section)
+        try body(indexPath, self[indexPath])
+      }
+    }
   }
   
   mutating func append(_ newElement: Element.Item, in section: Int) {
@@ -69,15 +87,6 @@ public extension MutableCollection where Element: Section, Index == Int {
         if try shouldBeRemoved(self[section].items[item]) {
           self[section].items.remove(at: item)
         }
-      }
-    }
-  }
-  
-  func forEach(_ body: (IndexPath, Element.Item) throws -> Void) rethrows {
-    for section in (0..<count) {
-      for item in (0..<countOfItems(in: section)) {
-        let indexPath = IndexPath(item: item, section: section)
-        try body(indexPath, self[indexPath])
       }
     }
   }

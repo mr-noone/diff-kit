@@ -8,23 +8,16 @@
 
 import Foundation
 
-public protocol Section {
-  associatedtype Header
-  associatedtype Footer
+public protocol AnySection {
   associatedtype Item
   
-  var header: Header? { get set }
-  var footer: Footer? { get set }
   var items: [Item] { get set }
 }
 
-public extension Array where Element: Section {
-  var lastIndexPath: IndexPath? {
-    guard count > 0 else { return nil }
-    
-    let item = countOfItems(in: count - 1)
-    guard item > 0 else { return nil }
-    
-    return IndexPath(item: item - 1, section: count - 1)
-  }
+public protocol Section: AnySection {
+  associatedtype Header
+  associatedtype Footer
+  
+  var header: Header? { get set }
+  var footer: Footer? { get set }
 }
