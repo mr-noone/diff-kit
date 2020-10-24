@@ -40,7 +40,7 @@ public extension UICollectionView {
       deleteItems(at: delItems)
       deleteSections(IndexSet(delSections))
       insertItems(at: insItems)
-      deleteSections(IndexSet(insSections))
+      insertSections(IndexSet(insSections))
     } completion: { _ in }
   }
 }
