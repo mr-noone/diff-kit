@@ -8,13 +8,13 @@
 
 import Foundation
 
-public extension Collection where Element: Section, Element.Item: Equatable {
+public extension Collection where Element: AnySection, Element.Item: Equatable {
   func diff<C>(from other: C) -> SectionDiff<Int, Element.Item> where C: Collection, C.Index == Index, C.Element == Element {
     return diff(from: other, by: { $0 == $1 })
   }
 }
 
-public extension Collection where Element: Section {
+public extension Collection where Element: AnySection {
   func diff<C>(from other: C, by areEquivalent: (Element.Item, C.Element.Item) throws -> Bool) rethrows -> SectionDiff<Int, Element.Item> where C: Collection, C.Index == Index, C.Element == Element {
     var diff = SectionDiff<Int, Element.Item>()
     
