@@ -1,51 +1,14 @@
-//
-//  Collection.swift
-//  diff-kit
-//
-//  Created by Aleksey Zgurskiy on 27.01.2020.
-//  Copyright © 2020 mr.noone. All rights reserved.
-//
-
 import Foundation
 
-public extension Collection where Element: AnySection, Element.Item: Equatable {
-  func diff<C>(from other: C) -> SectionDiff<Int, Element.Item> where C: Collection, C.Index == Index, C.Element == Element {
-    return diff(from: other, by: { $0 == $1 })
-  }
-}
-
-public extension Collection where Element: AnySection {
-  func diff<C>(from other: C, by areEquivalent: (Element.Item, C.Element.Item) throws -> Bool) rethrows -> SectionDiff<Int, Element.Item> where C: Collection, C.Index == Index, C.Element == Element {
-    var diff = SectionDiff<Int, Element.Item>()
-    
-    for i in 0..<Swift.max(count, other.count) {
-      let indx = index(startIndex, offsetBy: i)
-      let source = i < count ? self[indx].items : []
-      let other = i < other.count ? other[indx].items : []
-      
-      let itemsDiff = try source.diff(from: other, by: areEquivalent)
-      
-      if itemsDiff.inserted.isEmpty == false {
-        diff.append(.insert(index: i, element: itemsDiff.inserted))
-      }
-      
-      if itemsDiff.removed.isEmpty == false {
-        diff.append(.remove(index: i, element: itemsDiff.removed))
-      }
-    }
-    
-    return diff
-  }
-}
-
-public extension Collection where Element: Equatable {
-  func diff<C>(from other: C) -> Diff<Index, Element> where C: Collection, C.Index == Index, C.Element == Element {
-    return diff(from: other, by: { $0 == $1 })
-  }
-}
-
 public extension Collection {
-  func diff<C>(from other: C, by areEquivalent: (Element, C.Element) throws -> Bool) rethrows -> Diff<Index, Element> where C: Collection, C.Index == Index, C.Element == Element {
+  typealias Equivalent = (Element, Element) throws -> Bool
+  typealias CollectionDiff = DiffKit.CollectionDiff<Index, Element>
+  
+  func diff(from other: Self) -> CollectionDiff where Element: Equatable {
+    return diff(from: other, by: { $0 == $1 })
+  }
+  
+  func diff(from other: Self, by areEquivalent: Equivalent) rethrows -> CollectionDiff {
     let iCount = count
     let jCount = other.count
     
@@ -57,7 +20,7 @@ public extension Collection {
       for j in (0..<jCount).reversed() {
         let iIndex = index(startIndex, offsetBy: i)
         let jIndex = other.index(other.startIndex, offsetBy: j)
-
+        
         if try areEquivalent(self[iIndex], other[jIndex]) {
           buffer[j][i] = 1 + buffer[j + 1][i + 1]
         } else {
@@ -68,7 +31,7 @@ public extension Collection {
     }
     
     var i = 0, j = 0
-    var diff = Diff<Index, Element>()
+    var diff = CollectionDiff()
     
     while i < iCount || j < jCount {
       let iIndex = index(startIndex, offsetBy: i)
@@ -97,7 +60,14 @@ public extension Collection {
         j += 1
       }
     }
-      
+    
     return diff
+  }
+}
+
+public extension RangeReplaceableCollection {
+  mutating func apply(diff: CollectionDiff) {
+    diff.reversed().forEach { if case let CollectionDiff.Change.remove(index, _) = $0 { remove(at: index) } }
+    diff.forEach { if case let CollectionDiff.Change.insert(index, element) = $0 { insert(element, at: index) } }
   }
 }
