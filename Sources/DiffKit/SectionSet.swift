@@ -80,6 +80,26 @@ public extension SectionSet {
     return sections[section].count
   }
   
+  mutating func sortSections(by areInIncreasingOrder: (Section, Section) throws -> Bool) rethrows {
+    try sections.sort(by: areInIncreasingOrder)
+  }
+  
+  func firstSectionIndex(where predicate: (Section) throws -> Bool) rethrows -> SectionIndex? {
+    return try sections.firstIndex(where: predicate)
+  }
+  
+  func firstSectionIndex(by id: String) -> SectionIndex? {
+    return firstSectionIndex { return $0.id == id }
+  }
+  
+  func firstSection(where predicate: (Section) throws -> Bool) rethrows -> Section? {
+    return try sections.first(where: predicate)
+  }
+  
+  func firstSection(by id: String) -> Section? {
+    return firstSection { $0.id == id }
+  }
+  
   func forEach(_ body: (Index, Item) throws -> ()) rethrows {
     for section in 0..<countOfSections {
       for item in 0..<countOfItems(in: section) {
