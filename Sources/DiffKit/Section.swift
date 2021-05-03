@@ -71,7 +71,7 @@ extension Section: Equatable where Item: Equatable, Header: Equatable, Footer: E
 
 public extension Section {
   func sorted(by areInIncreasingOrder: (Item, Item) throws -> Bool) rethrows -> Self {
-    return try Section(items: items.sorted(by: areInIncreasingOrder), header: header, footer: footer)
+    return try Section(id: id, items: items.sorted(by: areInIncreasingOrder), header: header, footer: footer)
   }
   
   mutating func insert(_ item: Item, at index: Index) {
