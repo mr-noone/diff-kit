@@ -1,11 +1,9 @@
 import Foundation
 
-public typealias AnySectionSet = SectionSet<Any, Any, Any>
-
-public struct SectionSet<Item, Header, Footer> {
+public struct SectionSet<Item: Equatable, Header: Equatable, Footer: Equatable>: ExpressibleByArrayLiteral {
   public typealias Section = DiffKit.Section<Item, Header, Footer>
+  public typealias SectionIndex = Section.Index
   public typealias Element = Section.Element
-  public typealias SectionIndex = Int
   public typealias Index = IndexPath
   
   // MARK: - Properties
@@ -17,11 +15,7 @@ public struct SectionSet<Item, Header, Footer> {
   public init(sections: [Section] = []) {
     self.sections = sections
   }
-}
-
-// MARK: - ExpressibleByArrayLiteral
-
-extension SectionSet: ExpressibleByArrayLiteral {
+  
   public init(arrayLiteral sections: Section...) {
     self.sections = sections
   }
@@ -30,17 +24,12 @@ extension SectionSet: ExpressibleByArrayLiteral {
 // MARK: - MutableCollection
 
 extension SectionSet: MutableCollection {
-  public var startIndex: Index {
-    Index(item: 0, section: 0)
-  }
-  
-  public var endIndex: Index {
-    return Index(item: 0, section: sections.endIndex)
-  }
+  public var startIndex: Index { [0, 0] }
+  public var endIndex: Index { [sections.endIndex, 0] }
   
   public subscript(index: Index) -> Item {
-    get { sections[index.section][index.item] }
-    set { sections[index.section][index.item] = newValue }
+    get { sections[index[0]][index[1]] }
+    set { sections[index[0]][index[1]] = newValue }
   }
   
   public subscript(index: SectionIndex) -> Section {
@@ -49,21 +38,83 @@ extension SectionSet: MutableCollection {
   }
   
   public func index(after i: Index) -> Index {
-    let section = sections[i.section]
-    let item = sections[i.section].index(after: i.item)
+    let section = sections[i[0]]
+    let item = sections[i[0]].index(after: i[1])
     
     switch item {
-    case let item where item < section.endIndex:
-      return IndexPath(item: item, section: i.section)
-    default:
-      return IndexPath(item: section.startIndex, section: sections.index(after: i.section))
+    case let item where item < section.endIndex: return [i[0], item]
+    default: return [section.index(after: i[0]), section.startIndex]
+    }
+  }
+}
+
+// MARK: - Diffable
+
+extension SectionSet: Diffable {
+  public typealias Diff = SectionSetDiff<Int, Section>
+  
+  public func diff(from other: Self, by areEquivalent: Equivalent) rethrows -> Diff {
+    var result = Diff()
+    
+    try sections.diff(from: other.sections).forEach { change in
+      switch change {
+      case let .insert(index, section):
+        result.append(.insert(index: index, section: section))
+        
+      case let .remove(index, section):
+        result.append(.remove(index: index, section: section))
+        
+      case let .update(_, oldSection, newIndex, newSection) where
+            oldSection.id == newSection.id &&
+            oldSection.header == newSection.header &&
+            oldSection.footer == newSection.footer:
+        let diff = try oldSection.diff(from: newSection, by: areEquivalent)
+        result.append(.items(section: newIndex, diff: diff))
+        
+      case let .update(oldIndex, oldSection, newIndex, newSection):
+        result.append(.update(oldIndex: oldIndex, oldSection: oldSection,
+                              newIndex: newIndex, newSection: newSection))
+      }
+    }
+    
+    return result
+  }
+  
+  public mutating func apply(diff: Diff) {
+    diff.reversed().forEach { change in
+      switch change {
+      case let .remove(index, _),
+           let .update(index, _, _, _):
+        remove(sectionAt: index)
+      default:
+        break
+      }
+    }
+    
+    diff.forEach { change in
+      switch change {
+      case let .insert(index, section),
+           let .update(_, _, index, section):
+        insert(section, at: index)
+      default:
+        break
+      }
+    }
+    
+    diff.forEach { change in
+      switch change {
+      case let .items(section, diff):
+        self[section].apply(diff: diff)
+      default:
+        break
+      }
     }
   }
 }
 
 // MARK: - Equatable
 
-extension SectionSet: Equatable where Item: Equatable, Header: Equatable, Footer: Equatable {
+extension SectionSet: Equatable {
   public static func == (lhs: SectionSet, rhs: SectionSet) -> Bool {
     return lhs.sections == rhs.sections
   }
@@ -72,6 +123,8 @@ extension SectionSet: Equatable where Item: Equatable, Header: Equatable, Footer
 // MARK: - Public
 
 public extension SectionSet {
+  // MARK: - Count
+  
   var countOfSections: Int {
     sections.count
   }
@@ -80,51 +133,22 @@ public extension SectionSet {
     return sections[section].count
   }
   
-  mutating func sortSections(by areInIncreasingOrder: (Section, Section) throws -> Bool) rethrows {
-    try sections.sort(by: areInIncreasingOrder)
-  }
-  
-  func firstSectionIndex(where predicate: (Section) throws -> Bool) rethrows -> SectionIndex? {
-    return try sections.firstIndex(where: predicate)
-  }
-  
-  func firstSectionIndex(by id: String) -> SectionIndex? {
-    return firstSectionIndex { return $0.id == id }
-  }
-  
-  func firstSection(where predicate: (Section) throws -> Bool) rethrows -> Section? {
-    return try sections.first(where: predicate)
-  }
-  
-  func firstSection(by id: String) -> Section? {
-    return firstSection { $0.id == id }
-  }
-  
-  func forEach(_ body: (Index, Item) throws -> ()) rethrows {
-    for section in 0..<countOfSections {
-      for item in 0..<countOfItems(in: section) {
-        let indexPath = Index(item: item, section: section)
-        try body(indexPath, self[indexPath])
-      }
-    }
-  }
-  
-  mutating func compact() {
-    sections = sections.filter { !$0.isEmpty }
-  }
+  // MARK: - Insert
   
   mutating func insert(_ section: Section, at index: SectionIndex) {
     sections.insert(section, at: index)
   }
   
   mutating func insert(_ item: Item, at index: Index) {
-    if index.section < sections.endIndex {
-      sections[index.section].insert(item, at: index.item)
+    if index[0] < sections.endIndex {
+      sections[index[0]].insert(item, at: index[1])
     } else {
-      insert(Section(), at: index.section)
+      insert([], at: index[0])
       insert(item, at: index)
     }
   }
+  
+  // MARK: - Append
   
   mutating func append(_ section: Section) {
     insert(section, at: sections.endIndex)
@@ -138,17 +162,19 @@ public extension SectionSet {
     sections[sections.endIndex - 1].append(item)
   }
   
+  // MARK: - Remove
+  
   mutating func remove(sectionAt index: SectionIndex) {
     sections.remove(at: index)
   }
   
   mutating func remove(at index: Index) {
-    sections[index.section].remove(at: index.item)
+    sections[index[0]].remove(at: index[1])
   }
   
   mutating func removeFirst(where predicate: (Item) throws -> Bool) rethrows {
     if let index = try firstIndex(where: predicate) {
-      sections[index.section].remove(at: index.item)
+      sections[index[0]].remove(at: index[1])
     }
   }
   
@@ -160,71 +186,5 @@ public extension SectionSet {
         }
       }
     }
-  }
-}
-
-// MARK: - Diff
-
-public extension SectionSet {
-  typealias SectionDiff = Section.CollectionDiff
-  typealias SectionSetDiff = DiffKit.SectionSetDiff<Item, Header, Footer>
-  
-  func diff(from other: Self) -> SectionSetDiff where Element: Equatable {
-    return diff(from: other, by: { $0 == $1 })
-  }
-  
-  func diff(from other: Self, by areEquivalent: Equivalent) rethrows -> SectionSetDiff {
-    var diff = SectionSetDiff()
-    
-    for section in 0..<Swift.max(countOfSections, other.countOfSections) {
-      let source = section < countOfSections ? self[section] : []
-      let other = section < other.countOfSections ? other[section] : []
-      
-      switch try source.diff(from: other, by: areEquivalent) {
-      case let items where source.count > 0 && items.removeCount == source.count && other.count > 0 && items.insertCount == other.count:
-        diff.append(.remove(index: section, section: source))
-        diff.append(.insert(index: section, section: other))
-      case let items where source.count > 0 && items.removeCount == source.count:
-        diff.append(.remove(index: section, section: source))
-      case let items where other.count > 0 && items.insertCount == other.count:
-        diff.append(.insert(index: section, section: other))
-      case let itemsDiff:
-        diff.append(.items(section: section, diff: itemsDiff))
-      }
-    }
-    
-    return diff
-  }
-  
-  mutating func apply(diff: SectionSetDiff) {
-    var insertItems = [(index: IndexPath, item: Item)]()
-    var removeItems = [(index: IndexPath, item: Item)]()
-    var insertSections = [(index: Int, section: Section)]()
-    var removeSections = [(index: Int, section: Section)]()
-    
-    diff.forEach { change in
-      switch change {
-      case let .insert(index, section):
-        insertSections.append((index, section))
-      case let .remove(index, section):
-        removeSections.append((index, section))
-      case let .items(section, diff):
-        diff.forEach { change in
-          switch change {
-          case let .insert(index, item):
-            insertItems.append((IndexPath(item: index, section: section), item))
-          case let .remove(index, item):
-            removeItems.append((IndexPath(item: index, section: section), item))
-          }
-        }
-      }
-    }
-    
-    removeItems.reversed().forEach { index, _ in remove(at: index) }
-    removeSections.reversed().forEach { index, _ in remove(sectionAt: index) }
-    insertItems.forEach { index, item in insert(item, at: index) }
-    insertSections.forEach { index, section in insert(section, at: index) }
-    
-    compact()
   }
 }

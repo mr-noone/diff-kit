@@ -4,6 +4,8 @@ import DiffKit
 final class SectionSetTests: XCTestCase {
   typealias TestSectionSet = SectionSet<Int, Int, Int>
   
+  // MARK: - MutableCollection
+  
   func testStartIndex() {
     let indexPath = IndexPath(item: 0, section: 0)
     let sectionSet: TestSectionSet = [[1, 2]]
@@ -67,6 +69,77 @@ final class SectionSetTests: XCTestCase {
     XCTAssertEqual(sectionSet.index(after: indexPath), result)
   }
   
+  // MARK: - Diffable
+  
+  func testDiffItems() {
+    let one: TestSectionSet = [[1, 2, 3]]
+    let two: TestSectionSet = [[2, 3, 4]]
+    let diff: TestSectionSet.Diff = [
+      .items(section: 0, diff: [
+        .remove(index: 0, element: 1),
+        .insert(index: 2, element: 4)
+      ])
+    ]
+    XCTAssertEqual(one.diff(from: two), diff)
+  }
+  
+  func testDiffInsert() {
+    let one: TestSectionSet = [[4, 5, 6]]
+    let two: TestSectionSet = [[1, 2, 3], [4, 5, 6]]
+    let diff: TestSectionSet.Diff = [
+      .insert(index: 0, section: [1, 2, 3])
+    ]
+    XCTAssertEqual(one.diff(from: two), diff)
+  }
+  
+  func testDiffRemove() {
+    let one: TestSectionSet = [[1, 2, 3], [4, 5, 6]]
+    let two: TestSectionSet = [[4, 5, 6]]
+    let diff: TestSectionSet.Diff = [
+      .remove(index: 0, section: [1, 2, 3])
+    ]
+    XCTAssertEqual(one.diff(from: two), diff)
+  }
+  
+  func testDiffUpdate() {
+    let one: TestSectionSet = [
+      .init(id: 1, items: [1, 2, 3], header: 1, footer: 1),
+      .init(id: 2, items: [4, 5, 6], header: 2, footer: 2)
+    ]
+    let two: TestSectionSet = [
+      .init(id: 2, items: [1], header: 2, footer: 2),
+      .init(id: 2, items: [4, 5, 6], header: 2, footer: 2)
+    ]
+    let diff: TestSectionSet.Diff = [
+      .update(oldIndex: 0, oldSection: .init(id: 1, items: [1, 2, 3], header: 1, footer: 1),
+              newIndex: 0, newSection: .init(id: 2, items: [1], header: 2, footer: 2))
+    ]
+    XCTAssertEqual(one.diff(from: two), diff)
+  }
+  
+  func testApplyDiff() {
+    var one: TestSectionSet = [
+      .init(id: 1, items: [1, 2, 3], header: 1, footer: 1),
+      .init(id: 2, items: [4, 5, 6], header: 2, footer: 2),
+      .init(id: 3, items: [7, 8, 9], header: 3, footer: 3),
+    ]
+    let two: TestSectionSet = [
+      .init(id: 2, items: [4, 5, 6], header: 2, footer: 2),
+      .init(id: 3, items: [7, 8], header: 3, footer: 3),
+      .init(id: 4, items: [10, 11], header: 4, footer: 4)
+    ]
+    let diff: TestSectionSet.Diff = [
+      .remove(index: 0, section: .init(id: 1, items: [1, 2, 3], header: 1, footer: 1)),
+      .items(section: 1, diff: [.remove(index: 2, element: 9)]),
+      .insert(index: 2, section: .init(id: 4, items: [10, 11], header: 4, footer: 4))
+    ]
+    
+    one.apply(diff: diff)
+    XCTAssertEqual(one, two)
+  }
+  
+  // MARK: - Count
+  
   func testCountOfSections() {
     let sectionSet: TestSectionSet = [[1, 2], [3, 4]]
     XCTAssertEqual(sectionSet.countOfSections, 2)
@@ -77,11 +150,7 @@ final class SectionSetTests: XCTestCase {
     XCTAssertEqual(sectionSet.countOfItems(in: 0), 3)
   }
   
-  func testCompact() {
-    var sectionSet: TestSectionSet = [[], [1, 2], []]
-    sectionSet.compact()
-    XCTAssertEqual(sectionSet, [[1, 2]])
-  }
+  // MARK: - Inset
   
   func testInsertSection() {
     var sectionSet: TestSectionSet = [[3, 4]]
@@ -101,6 +170,8 @@ final class SectionSetTests: XCTestCase {
     XCTAssertEqual(sectionSet, [[1, 2], [3]])
   }
   
+  // MARK: - Append
+  
   func testAppendSection() {
     var sectionSet: TestSectionSet = [[1, 2]]
     sectionSet.append([3, 4])
@@ -118,6 +189,8 @@ final class SectionSetTests: XCTestCase {
     sectionSet.append(3)
     XCTAssertEqual(sectionSet, [[1], [2, 3]])
   }
+  
+  // MARK: - Remove
   
   func testRemoveSection() {
     var sectionSet: TestSectionSet = [[1], [2]]
@@ -141,43 +214,5 @@ final class SectionSetTests: XCTestCase {
     var sectionSet: TestSectionSet = [[1, 2, 3, 2]]
     sectionSet.removeAll(where: { $0 == 2 })
     XCTAssertEqual(sectionSet, [[1, 3]])
-  }
-  
-  func testSectionSetDiff() {
-    let one: TestSectionSet = [[1, 2, 3], [4, 5]]
-    let two: TestSectionSet = [[2, 3, 4], [5], [6]]
-    
-    let oneDiff: TestSectionSet.SectionSetDiff = [
-      .items(section: 0, diff: [
-        .remove(index: 0, element: 1),
-        .insert(index: 2, element: 4)
-      ]),
-      .items(section: 1, diff: [
-        .remove(index: 0, element: 4)
-      ]),
-      .insert(index: 2, section: [6])
-    ]
-    
-    let twoDiff: TestSectionSet.SectionSetDiff = [
-      .items(section: 0, diff: [
-        .insert(index: 0, element: 1),
-        .remove(index: 2, element: 4)
-      ]),
-      .items(section: 1, diff: [
-        .insert(index: 0, element: 4)
-      ]),
-      .remove(index: 2, section: [6])
-    ]
-    
-    XCTAssertEqual(one.diff(from: two), oneDiff)
-    XCTAssertEqual(two.diff(from: one), twoDiff)
-  }
-  
-  func testApplyDiff() {
-    var one: TestSectionSet = [[1, 2, 3], [4, 5], [6, 7]]
-    let two: TestSectionSet = [[2, 3, 4], [6, 7]]
-    
-    one.apply(diff: one.diff(from: two))
-    XCTAssertEqual(one, two)
   }
 }
