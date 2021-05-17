@@ -1,14 +1,14 @@
 import Foundation
 
-public struct Section<Item, Header, Footer> {
+public struct Section<Item: Equatable, Header: Equatable, Footer: Equatable> {
   public typealias Element = Item
   public typealias Index = Int
   
   // MARK: - Properties
   
-  private var items: [Element]
+  private var items: [Item]
   
-  public let id: String?
+  public let id: AnyHashable?
   public var header: Header?
   public var footer: Footer?
   
@@ -18,7 +18,10 @@ public struct Section<Item, Header, Footer> {
     self.init(items: [])
   }
   
-  public init(id: String? = nil, items: [Item], header: Header? = nil, footer: Footer? = nil) {
+  public init(id: AnyHashable? = nil,
+              items: [Item],
+              header: Header? = nil,
+              footer: Footer? = nil) {
     self.id = id
     self.items = items
     self.header = header
@@ -38,13 +41,8 @@ extension Section: ExpressibleByArrayLiteral {
 // MARK: - MutableCollection
 
 extension Section: MutableCollection {
-  public var startIndex: Index {
-    return items.startIndex
-  }
-  
-  public var endIndex: Index {
-    return items.endIndex
-  }
+  public var startIndex: Index { items.startIndex }
+  public var endIndex: Index { items.endIndex }
   
   public subscript(index: Index) -> Item {
     get { items[index] }
@@ -56,9 +54,23 @@ extension Section: MutableCollection {
   }
 }
 
+// MARK: - Diffable
+
+extension Section: Diffable {
+  public typealias Diff = Array<Item>.Diff
+  
+  public func diff(from other: Self, by areEquivalent: Equivalent) rethrows -> Diff {
+    return try items.diff(from: other.items, by: areEquivalent)
+  }
+  
+  public mutating func apply(diff: Diff) {
+    items.apply(diff: diff)
+  }
+}
+
 // MARK: - Equatable
 
-extension Section: Equatable where Item: Equatable, Header: Equatable, Footer: Equatable {
+extension Section: Equatable {
   public static func == (lhs: Self, rhs: Self) -> Bool {
     return lhs.id == rhs.id
       && lhs.items == rhs.items
@@ -67,13 +79,9 @@ extension Section: Equatable where Item: Equatable, Header: Equatable, Footer: E
   }
 }
 
-// MARK: - Methods
+// MARK: - Public methods
 
 public extension Section {
-  func sorted(by areInIncreasingOrder: (Item, Item) throws -> Bool) rethrows -> Self {
-    return try Section(id: id, items: items.sorted(by: areInIncreasingOrder), header: header, footer: footer)
-  }
-  
   mutating func insert(_ item: Item, at index: Index) {
     items.insert(item, at: index)
   }

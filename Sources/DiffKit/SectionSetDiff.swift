@@ -1,51 +1,51 @@
 import Foundation
 
-public struct SectionSetDiff<Item, Header, Footer>: Collection {
-  public typealias Element = Change<Item, Header, Footer>
-  public typealias Index = Int
-  
-  public enum Change<Item, Header, Footer> {
-    public typealias Section = DiffKit.Section<Item, Header, Footer>
-    
-    case insert(index: Int, section: Section)
-    case remove(index: Int, section: Section)
-    case items(section: Int, diff: Section.CollectionDiff)
+public struct SectionSetDiff<ChangeIndex: Comparable, ChangeElement: Diffable>: AnyCollectionDiff {
+  public enum SectionSetDiffItem<Index: Comparable, Element: Diffable>: AnyCollectionDiffItem {
+    case insert(index: Index, section: Element)
+    case remove(index: Index, section: Element)
+    case update(oldIndex: Index, oldSection: Element, newIndex: Index, newSection: Element)
+    case items(section: Index, diff: Element.Diff)
   }
+  
+  public typealias Element = SectionSetDiffItem<ChangeIndex, ChangeElement>
+  public typealias Index = Int
   
   // MARK: - Properties
   
-  private var changes = [Element]()
+  private var items = [Element]()
   
-  public var startIndex: Index { changes.startIndex }
-  public var endIndex: Index { changes.endIndex }
+  public var startIndex: Index { items.startIndex }
+  public var endIndex: Index { items.endIndex }
   
   // MARK: - Methods
   
   public subscript(index: Index) -> Element {
-    return changes[index]
+    get { items[index] }
+    set { items[index] = newValue }
   }
   
   public func index(after i: Index) -> Index {
-    return changes.index(after: i)
+    items.index(after: i)
   }
   
   public mutating func append(_ element: Element) {
-    changes.append(element)
+    items.append(element)
   }
-}
-
-// MARK: - ExpressibleByArrayLiteral
-
-extension SectionSetDiff: ExpressibleByArrayLiteral {
-  public init(arrayLiteral changes: Element...) {
-    self.changes = changes
+  
+  // MARK: - Inits
+  
+  public init(_ items: [Element]) {
+    self.items = items
+  }
+  
+  public init() {
+    self.init([])
   }
 }
 
 // MARK: - Equatable
 
-extension SectionSetDiff.Change: Equatable where Item: Equatable, Header: Equatable, Footer: Equatable {}
+extension SectionSetDiff.SectionSetDiffItem: Equatable where Element: Equatable, Element.Diff: Equatable {}
 
-// MARK: - Equatable
-
-extension SectionSetDiff: Equatable where Item: Equatable, Header: Equatable, Footer: Equatable {}
+extension SectionSetDiff: Equatable where ChangeElement: Equatable, ChangeElement.Diff: Equatable {}
