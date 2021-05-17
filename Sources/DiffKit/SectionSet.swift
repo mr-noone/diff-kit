@@ -133,6 +133,12 @@ public extension SectionSet {
     return sections[section].count
   }
   
+  // MARK: - Sorting
+  
+  mutating func sortSections(by areInIncreasingOrder: (Section, Section) throws -> Bool) rethrows {
+    try sections.sort(by: areInIncreasingOrder)
+  }
+  
   // MARK: - Insert
   
   mutating func insert(_ section: Section, at index: SectionIndex) {
