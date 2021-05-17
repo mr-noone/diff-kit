@@ -157,6 +157,12 @@ public extension SectionSet {
     try sections.sort(by: areInIncreasingOrder)
   }
   
+  // MARK: - Compact
+  
+  mutating func compact() {
+    sections = sections.filter { !$0.isEmpty }
+  }
+  
   // MARK: - Insert
   
   mutating func insert(_ section: Section, at index: SectionIndex) {
