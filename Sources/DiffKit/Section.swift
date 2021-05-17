@@ -82,6 +82,10 @@ extension Section: Equatable {
 // MARK: - Public methods
 
 public extension Section {
+  mutating func sort(by areInIncreasingOrder: (Item, Item) throws -> Bool) rethrows {
+    try items.sort(by: areInIncreasingOrder)
+  }
+  
   mutating func insert(_ item: Item, at index: Index) {
     items.insert(item, at: index)
   }

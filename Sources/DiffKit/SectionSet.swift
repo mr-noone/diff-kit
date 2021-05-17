@@ -133,6 +133,36 @@ public extension SectionSet {
     return sections[section].count
   }
   
+  // MARK: - Search
+  
+  func firstSectionIndex(where predicate: (Section) throws -> Bool) rethrows -> SectionIndex? {
+    return try sections.firstIndex(where: predicate)
+  }
+  
+  func firstSectionIndex(by id: AnyHashable) -> SectionIndex? {
+    return firstSectionIndex { return $0.id == id }
+  }
+  
+  func firstSection(where predicate: (Section) throws -> Bool) rethrows -> Section? {
+    return try sections.first(where: predicate)
+  }
+  
+  func firstSection(by id: AnyHashable) -> Section? {
+    return firstSection { $0.id == id }
+  }
+  
+  // MARK: - Sorting
+  
+  mutating func sortSections(by areInIncreasingOrder: (Section, Section) throws -> Bool) rethrows {
+    try sections.sort(by: areInIncreasingOrder)
+  }
+  
+  // MARK: - Compact
+  
+  mutating func compact() {
+    sections = sections.filter { !$0.isEmpty }
+  }
+  
   // MARK: - Insert
   
   mutating func insert(_ section: Section, at index: SectionIndex) {
