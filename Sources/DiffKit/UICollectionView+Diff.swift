@@ -1,46 +1,38 @@
-//
-//  UICollectionView+Diff.swift
-//  diff-kit
-//
-//  Created by Aleksey Zgurskiy on 24.10.2020.
-//  Copyright © 2020 mr.noone. All rights reserved.
-//
-
 import UIKit
 
 public extension UICollectionView {
-  func apply<Item>(diff: SectionDiff<Int, Item>) {
-    var insSections = [Int]()
-    var delSections = [Int]()
+  func apply<I, H, F>(diff: SectionSet<I, H, F>.Diff) {
+    var insertIndexSet = IndexSet()
+    var removeIndexSet = IndexSet()
+    var updateIndexSet = IndexSet()
     
-    var delItems = [IndexPath]()
-    var insItems = [IndexPath]()
+    var insertIndexPaths = [IndexPath]()
+    var removeIndexPaths = [IndexPath]()
+    var updateIndexPaths = [IndexPath]()
     
-    diff.removed.forEach { section in
-      if section.element.count == numberOfItems(inSection: section.index) {
-        delSections.append(section.index)
-      } else {
-        section.element.forEach { item in
-          delItems.append(IndexPath(item: item.index, section: section.index))
-        }
-      }
-    }
-    
-    diff.inserted.forEach { section in
-      if delSections.contains(section.index) || numberOfSections <= section.index {
-        insSections.append(section.index)
-      } else {
-        section.element.forEach { item in
-          insItems.append(IndexPath(item: item.index, section: section.index))
+    diff.forEach { change in
+      switch change {
+      case let .insert(index, _):       insertIndexSet.insert(index)
+      case let .remove(index, _):       removeIndexSet.insert(index)
+      case let .update(_, _, index, _): updateIndexSet.insert(index)
+      case let .items(section, diff):
+        diff.forEach { change in
+          switch change {
+          case let .insert(item, _):       insertIndexPaths.append([section, item])
+          case let .remove(item, _):       removeIndexPaths.append([section, item])
+          case let .update(_, _, item, _): updateIndexPaths.append([section, item])
+          }
         }
       }
     }
     
     performBatchUpdates {
-      deleteItems(at: delItems)
-      deleteSections(IndexSet(delSections))
-      insertItems(at: insItems)
-      insertSections(IndexSet(insSections))
+      deleteItems(at: removeIndexPaths)
+      deleteSections(removeIndexSet)
+      insertItems(at: insertIndexPaths)
+      insertSections(insertIndexSet)
+      reloadItems(at: updateIndexPaths)
+      reloadSections(updateIndexSet)
     } completion: { _ in }
   }
 }

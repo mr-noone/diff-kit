@@ -1,46 +1,38 @@
-//
-//  UITableView+Diff.swift
-//  diff-kit
-//
-//  Created by Aleksey Zgurskiy on 29.01.2020.
-//  Copyright © 2020 mr.noone. All rights reserved.
-//
-
 import UIKit
 
 public extension UITableView {
-  func apply<Item>(diff: SectionDiff<Int, Item>, with animation: UITableView.RowAnimation) {
-    var insSections = [Int]()
-    var delSections = [Int]()
+  func apply<I, H, F>(diff: SectionSet<I, H, F>.Diff, with animation: UITableView.RowAnimation) {
+    var insertIndexSet = IndexSet()
+    var removeIndexSet = IndexSet()
+    var updateIndexSet = IndexSet()
     
-    var delItems = [IndexPath]()
-    var insItems = [IndexPath]()
+    var insertIndexPaths = [IndexPath]()
+    var removeIndexPaths = [IndexPath]()
+    var updateIndexPaths = [IndexPath]()
     
-    diff.removed.forEach { section in
-      if section.element.count == numberOfRows(inSection: section.index) {
-        delSections.append(section.index)
-      } else {
-        section.element.forEach { item in
-          delItems.append(IndexPath(item: item.index, section: section.index))
-        }
-      }
-    }
-    
-    diff.inserted.forEach { section in
-      if delSections.contains(section.index) || numberOfSections <= section.index {
-        insSections.append(section.index)
-      } else {
-        section.element.forEach { item in
-          insItems.append(IndexPath(item: item.index, section: section.index))
+    diff.forEach { change in
+      switch change {
+      case let .insert(index, _):       insertIndexSet.insert(index)
+      case let .remove(index, _):       removeIndexSet.insert(index)
+      case let .update(_, _, index, _): updateIndexSet.insert(index)
+      case let .items(section, diff):
+        diff.forEach { change in
+          switch change {
+          case let .insert(item, _):       insertIndexPaths.append([section, item])
+          case let .remove(item, _):       removeIndexPaths.append([section, item])
+          case let .update(_, _, item, _): updateIndexPaths.append([section, item])
+          }
         }
       }
     }
     
     beginUpdates()
-    deleteRows(at: delItems, with: animation)
-    deleteSections(IndexSet(delSections), with: animation)
-    insertRows(at: insItems, with: animation)
-    insertSections(IndexSet(insSections), with: animation)
+    deleteRows(at: removeIndexPaths, with: animation)
+    deleteSections(removeIndexSet, with: animation)
+    insertRows(at: insertIndexPaths, with: animation)
+    insertSections(insertIndexSet, with: animation)
+    reloadRows(at: updateIndexPaths, with: animation)
+    reloadSections(updateIndexSet, with: animation)
     endUpdates()
   }
 }
