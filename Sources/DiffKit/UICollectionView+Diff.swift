@@ -1,3 +1,4 @@
+#if os(iOS)
 import UIKit
 
 public extension UICollectionView {
@@ -36,3 +37,4 @@ public extension UICollectionView {
     } completion: { _ in }
   }
 }
+#endif
