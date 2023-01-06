@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
   name: "DiffKit",
-  platforms: [.iOS(.v9)],
+  platforms: [.iOS(.v9), .macOS(.v10_13)],
   products: [
     .library(name: "DiffKit", targets: ["DiffKit"])
   ],

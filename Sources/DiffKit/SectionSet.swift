@@ -64,16 +64,14 @@ extension SectionSet: Diffable {
       case let .remove(index, section):
         result.append(.remove(index: index, section: section))
         
-      case let .update(_, oldSection, newIndex, newSection) where
-            oldSection.id == newSection.id &&
-            oldSection.header == newSection.header &&
-            oldSection.footer == newSection.footer:
-        let diff = try oldSection.diff(from: newSection, by: areEquivalent)
-        result.append(.items(section: newIndex, diff: diff))
-        
       case let .update(oldIndex, oldSection, newIndex, newSection):
-        result.append(.update(oldIndex: oldIndex, oldSection: oldSection,
-                              newIndex: newIndex, newSection: newSection))
+        if oldSection.id == newSection.id && oldSection.header == newSection.header && oldSection.footer == newSection.footer {
+          let diff = try oldSection.diff(from: newSection, by: areEquivalent)
+          result.append(.items(section: newIndex, diff: diff))
+        } else {
+          result.append(.update(oldIndex: oldIndex, oldSection: oldSection,
+                                newIndex: newIndex, newSection: newSection))
+        }
       }
     }
     
