@@ -57,9 +57,13 @@ final class DiffableTests: XCTestCase {
   
   func testManyToMany() {
     let diff: Diff = [
-      .update(oldIndex: 0, oldElement: 9, newIndex: 0, newElement: 5),
-      .update(oldIndex: 1, oldElement: 4, newIndex: 1, newElement: 6),
-      .remove(index: 2, element: 0),
+      .insert(index: 0, element: 5),
+      .insert(index: 1, element: 6),
+      .insert(index: 2, element: 2),
+      .insert(index: 3, element: 8),
+      .insert(index: 4, element: 6),
+      .update(oldIndex: 1, oldElement: 4, newIndex: 6, newElement: 8),
+      .update(oldIndex: 2, oldElement: 0, newIndex: 7, newElement: 1),
       .remove(index: 3, element: 7),
       .remove(index: 4, element: 2),
       .remove(index: 5, element: 1),
@@ -67,16 +71,15 @@ final class DiffableTests: XCTestCase {
       .remove(index: 7, element: 3),
       .remove(index: 8, element: 7),
       .remove(index: 9, element: 7),
-      .update(oldIndex: 11, oldElement: 1, newIndex: 3, newElement: 8),
-      .insert(index: 4, element: 6),
-      .insert(index: 5, element: 9),
-      .insert(index: 6, element: 8)
+      .remove(index: 10, element: 2),
+      .remove(index: 11, element: 1),
+      .remove(index: 12, element: 1),
     ]
     
     let a = [9, 4, 0, 7, 2, 1, 3, 3, 7, 7, 2, 1, 1]
     let b = [5, 6, 2, 8, 6, 9, 8, 1]
     
-    XCTAssertEqual(a.diff(from: b, by: { $0 == $1 }), diff)
+    XCTAssertEqual(a.diff(from: b, by: ==), diff)
   }
   
   func testApplyDiff() {
@@ -102,5 +105,13 @@ final class DiffableTests: XCTestCase {
     
     a.apply(diff: diff)
     XCTAssertEqual(a, b)
+  }
+  
+  func testApplyManyToMany() {
+    var one = (0..<500).map { _ in Int.random(in: 0...1000) }
+    let two = (0..<500).map { _ in Int.random(in: 0...1000) }
+    let diff = one.diff(from: two)
+    one.apply(diff: diff)
+    XCTAssertEqual(one, two)
   }
 }
