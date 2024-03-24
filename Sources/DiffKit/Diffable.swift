@@ -10,9 +10,13 @@ public protocol Diffable where Self: Collection {
 
 public extension Diffable where Self: BidirectionalCollection, Diff == CollectionDiff<Index, Element> {
   func diff(from other: Self, by areEquivalent: Equivalent) rethrows -> Diff {
-    let buffer = try self.buffer(from: other, by: areEquivalent)
-    let diff = self.diff(from: other, with: buffer)
-    return diff
+    return withContiguousStorage(for: self) { a in
+      return withContiguousStorage(for: other) { b in
+        let buffer = try! buffer(from: a, to: b, by: areEquivalent)
+        let diff = diff(from: self, to: other, with: buffer)
+        return diff
+      }
+    }
   }
 }
 
@@ -47,36 +51,47 @@ public extension Diffable where Self: RangeReplaceableCollection, Diff == Collec
 }
 
 private extension Diffable where Self: BidirectionalCollection, Diff == CollectionDiff<Index, Element> {
-  func buffer(from other: Self, by areEquivalent: Equivalent) rethrows -> [[Int]] {
-    let iCount = count
-    let jCount = other.count
+  func withContiguousStorage<C: Collection, R>(
+    for values: C,
+    _ body: (UnsafeBufferPointer<C.Element>) throws -> R
+  ) rethrows -> R {
+    if let result = try values.withContiguousStorageIfAvailable(body) { return result }
+    let array = ContiguousArray(values)
+    return try array.withUnsafeBufferPointer(body)
+  }
+  
+  func buffer(
+    from a: UnsafeBufferPointer<Element>,
+    to b: UnsafeBufferPointer<Element>,
+    by areEquivalent: Equivalent
+  ) rethrows -> [Int] {
+    let iCount = a.count
+    let jCount = b.count
     
-    let row = Array(repeating: Int(0), count: iCount + 1)
-    var buffer = Array(repeating: row, count: jCount + 1)
-    
-    var i = iCount
-    var iIndex = index(startIndex, offsetBy: i)
-    while i > 0 {
-      i -= 1
-      iIndex = index(before: iIndex)
-      let iIndex = index(startIndex, offsetBy: i)
-      let iElement = self[iIndex]
-      
-      var j = jCount
-      var jIndex = other.index(other.startIndex, offsetBy: j)
-      while j > 0 {
-        j -= 1
-        jIndex = other.index(before:jIndex)
-        let jIndex = other.index(other.startIndex, offsetBy: j)
-        let jElement = other[jIndex]
+    var buffer = Array(repeating: Int(0), count: (iCount &+ 1) &* (jCount &+ 1))
+    try buffer.withUnsafeMutableBufferPointer { buffer in
+      var i = iCount
+      while i > 0 {
+        i &-= 1
+        let iElement = a[i]
         
-        let equal = try areEquivalent(iElement, jElement)
-        
-        if equal {
-          buffer[j][i] = buffer[j + 1][i + 1] + 1
-        } else {
-          buffer[j][i] = Swift.max(buffer[j][i + 1],
-                                   buffer[j + 1][i])
+        var j = jCount
+        while j > 0 {
+          j &-= 1
+          let jElement = b[j]
+          let bIndex = i &* jCount &+ j
+          
+          if try areEquivalent(iElement, jElement) {
+            let vIndex = (i &+ 1) &* jCount &+ (j &+ 1)
+            let v = buffer[vIndex]
+            buffer[bIndex] = v &+ 1
+          } else {
+            let oneIndex = i &* jCount &+ (j &+ 1)
+            let twoIndex = (i &+ 1) &* jCount &+ j
+            let one = buffer[oneIndex]
+            let two = buffer[twoIndex]
+            buffer[bIndex] = Swift.max(one, two)
+          }
         }
       }
     }
@@ -84,34 +99,36 @@ private extension Diffable where Self: BidirectionalCollection, Diff == Collecti
     return buffer
   }
   
-  func diff(from other: Self, with buffer: [[Int]]) -> Diff {
-    let iCount = count
-    let jCount = other.count
+  func diff(from a: Self, to b: Self, with buffer: [Int]) -> Diff {
+    let iCount = a.count
+    let jCount = b.count
     
     var i = 0, j = 0
     var diff = Diff()
     
     while i < iCount || j < jCount {
-      let iIndex = index(startIndex, offsetBy: i)
-      let jIndex = other.index(other.startIndex, offsetBy: j)
+      let iIndex = a.index(a.startIndex, offsetBy: i)
+      let jIndex = b.index(b.startIndex, offsetBy: j)
       
-      switch buffer[j][i] {
+      switch buffer[i * jCount + j] {
       case _ where j == jCount:
-        diff.append(.remove(index: iIndex, element: self[iIndex]))
+        diff.append(.remove(index: iIndex, element: a[iIndex]))
         i += 1
       case _ where i == iCount:
-        diff.append(.insert(index: jIndex, element: other[jIndex]))
+        diff.append(.insert(index: jIndex, element: b[jIndex]))
         j += 1
-      case buffer[j + 1][i + 1]:
-        diff.append(.update(oldIndex: iIndex, oldElement: self[iIndex],
-                            newIndex: jIndex, newElement: other[jIndex]))
+      case buffer[(i + 1) * jCount + (j + 1)]:
+        diff.append(.update(
+          oldIndex: iIndex, oldElement: a[iIndex],
+          newIndex: jIndex, newElement: b[jIndex])
+        )
         i += 1
         j += 1
-      case buffer[j][i + 1]:
-        diff.append(.remove(index: iIndex, element: self[iIndex]))
+      case buffer[(i + 1) * jCount + j]:
+        diff.append(.remove(index: iIndex, element: a[iIndex]))
         i += 1
-      case buffer[j + 1][i]:
-        diff.append(.insert(index: jIndex, element: other[jIndex]))
+      case buffer[i * jCount + (j + 1)]:
+        diff.append(.insert(index: jIndex, element: b[jIndex]))
         j += 1
       default:
         i += 1
